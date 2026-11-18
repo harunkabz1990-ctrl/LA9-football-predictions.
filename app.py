@@ -173,6 +173,81 @@ def sync_results(days:int=5):
  log('result sync','OK' if not errs else 'PARTIAL',f'{updated} results; '+ '; '.join(errs))
  return {'results_updated':updated,'errors':errs}
 
+@app.post('/api/history/sync')
+def sync_history():
+    if not API_KEY:
+        raise HTTPException(400, 'Add APISPORTS_KEY to the server environment.')
+
+    added = 0
+    errors = []
+    seasons = [2022, 2023, 2024]
+
+    for name, lid in LEAGUES.items():
+        for season in seasons:
+            try:
+                res = requests.get(
+                    API_BASE + '/fixtures',
+                    headers={'x-apisports-key': API_KEY},
+                    params={'league': lid, 'season': season},
+                    timeout=30
+                )
+                res.raise_for_status()
+                payload = res.json()
+
+                if payload.get('errors'):
+                    raise RuntimeError(str(payload['errors']))
+
+                for item in payload.get('response', []):
+                    fx = item['fixture']
+                    teams = item['teams']
+                    goals = item['goals']
+                    status = fx['status']['short']
+
+                    if status not in ('FT', 'AET', 'PEN'):
+                        continue
+
+                    if goals['home'] is None or goals['away'] is None:
+                        continue
+
+                    with db() as c:
+                        c.execute(
+                            '''INSERT OR IGNORE INTO matches
+                            (fixture_id, date, competition, season,
+                             home_team, away_team, home_goals, away_goals,
+                             status, source)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                            (
+                                str(fx['id']),
+                                fx['date'],
+                                name,
+                                str(season),
+                                teams['home']['name'],
+                                teams['away']['name'],
+                                goals['home'],
+                                goals['away'],
+                                status,
+                                'API-Sports Historical'
+                            )
+                        )
+                        added += c.execute(
+                            'SELECT changes()'
+                        ).fetchone()[0]
+
+            except Exception as e:
+                errors.append(f'{name} {season}: {e}')
+
+    log(
+        'historical API sync',
+        'OK' if not errors else 'PARTIAL',
+        f'{added} historical matches; ' + '; '.join(errors)
+    )
+
+    return {
+        'matches_added': added,
+        'errors': errors,
+        'seasons': seasons
+    }
+
 @app.post('/api/predict')
 def run_predictions():
  with db() as c: rows=[dict(x) for x in c.execute("select * from matches where status in ('NS','TBD') and date>=? order by date",(datetime.now(timezone.utc).isoformat(),)).fetchall()]
