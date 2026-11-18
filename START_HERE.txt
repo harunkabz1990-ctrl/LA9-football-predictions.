@@ -1,0 +1,21 @@
+LA-9 WORKING SYSTEM v2.0
+
+QUICK START (computer or cloud host)
+1. Install Python 3.11 or later.
+2. Open a terminal in this folder.
+3. Run: pip install -r requirements.txt
+4. Optional: set APISPORTS_KEY to your API-Sports/API-Football key.
+5. Run: uvicorn app:app --host 0.0.0.0 --port 8000
+6. Open http://localhost:8000
+
+ON ANDROID
+The easiest use is to deploy the package to a cloud Python host and open its URL in Chrome. Running the Python server directly on Android requires a terminal environment such as Termux and is not recommended for always-on automation.
+
+DATA
+Import verified completed-match CSV history. The app does not bundle or fabricate ten seasons. The live API key must be added to the server environment, not the browser. Provider coverage, quotas and league IDs must be checked in your provider account.
+
+CLOUD
+Use Dockerfile / render.yaml. Configure persistent storage mounted at /data, LA9_DB_PATH=/data/la9.sqlite3, and APISPORTS_KEY. Deploying needs your own hosting account and provider API key.
+
+MODEL
+This is a working baseline, not a validated 90% prediction model. It requires historical data and walk-forward testing. Never treat probability estimates as guaranteed winners.

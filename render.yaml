@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: la9-football-intelligence
+    runtime: docker
+    plan: starter
+    disk:
+      name: la9-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: LA9_DB_PATH
+        value: /data/la9.sqlite3
+      - key: APISPORTS_KEY
+        sync: false
